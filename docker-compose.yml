@@ -1,0 +1,142 @@
+version: '3.9'
+
+# =============================================================================
+# WaterSight — Docker Compose (SIH Demo)
+# One command: docker-compose up --build
+# Services: frontend (React) + backend (FastAPI) + db (PostGIS) + minio + titiler
+# =============================================================================
+
+services:
+
+  # ── PostgreSQL + PostGIS ────────────────────────────────────────────────
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: watersight-db
+    environment:
+      POSTGRES_DB: watersight
+      POSTGRES_USER: watersight
+      POSTGRES_PASSWORD: watersight
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./db/seed_data.sql:/docker-entrypoint-initdb.d/02_seed_data.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U watersight -d watersight"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── MinIO (S3-compatible object storage) ───────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: watersight-minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"     # S3 API
+      - "9001:9001"     # Web console
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── TiTiler (Cloud-Optimized GeoTIFF tile server) ──────────────────────
+  titiler:
+    image: developmentseed/titiler:latest
+    container_name: watersight-titiler
+    environment:
+      - TITILER_API_DEBUG=FALSE
+      - GDAL_CACHEMAX=512
+      - GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR
+      - VSI_CACHE=TRUE
+      - VSI_CACHE_SIZE=536870912   # 512MB cache
+    volumes:
+      - ./data/processed:/app/data
+    ports:
+      - "8000:80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── FastAPI Backend ─────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: watersight-backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://watersight:watersight@db:5432/watersight
+      DATABASE_URL_SYNC: postgresql://watersight:watersight@db:5432/watersight
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      TITILER_BASE_URL: http://titiler:80
+      SECRET_KEY: watersight-demo-secret-2024-sih
+      DEMO_MODE: "true"
+      PROCESSED_DATA_DIR: /app/data/processed
+      DEMO_IMAGES_DIR: /app/data/demo_images
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    command: >
+      sh -c "
+        echo 'Waiting for DB...' &&
+        sleep 3 &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8080 --workers 2
+      "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── React Frontend (Nginx) ──────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: watersight-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:8080
+
+  # ── Pipeline Runner (one-off, generates demo data) ──────────────────────
+  pipeline:
+    build:
+      context: ./pipeline
+      dockerfile: Dockerfile
+    container_name: watersight-pipeline
+    volumes:
+      - ./data:/app/data
+    command: python run_pipeline.py --all --images
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - pipeline   # Only runs with: docker-compose --profile pipeline up pipeline
+
+volumes:
+  pg_data:
+  minio_data:
+
+networks:
+  default:
+    name: watersight-network

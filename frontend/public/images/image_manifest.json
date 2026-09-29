@@ -1,0 +1,90 @@
+[
+  {
+    "filename": "img_check_dam_pre.jpg",
+    "public_path": "/images/img_check_dam_pre.jpg",
+    "lat": 24.862,
+    "lon": 73.857,
+    "intervention_type": "check_dam",
+    "observation_stage": "pre",
+    "captured_at": "2022-05-15",
+    "description": "Dry nala bed \u2014 planned check dam site. Severe soil erosion.",
+    "source": "Unsplash (real photo)"
+  },
+  {
+    "filename": "img_check_dam_post.jpg",
+    "public_path": "/images/img_check_dam_post.jpg",
+    "lat": 24.863,
+    "lon": 73.858,
+    "intervention_type": "check_dam",
+    "observation_stage": "post",
+    "captured_at": "2024-09-20",
+    "description": "Check dam complete. Water impounded. Vegetation recovering around structure.",
+    "source": "Synthetic fallback"
+  },
+  {
+    "filename": "img_farm_pond_pre.jpg",
+    "public_path": "/images/img_farm_pond_pre.jpg",
+    "lat": 24.872,
+    "lon": 73.901,
+    "intervention_type": "farm_pond",
+    "observation_stage": "pre",
+    "captured_at": "2022-06-02",
+    "description": "Dry agricultural field. Cracked soil. Proposed farm pond location.",
+    "source": "Unsplash (real photo)"
+  },
+  {
+    "filename": "img_farm_pond_post.jpg",
+    "public_path": "/images/img_farm_pond_post.jpg",
+    "lat": 24.873,
+    "lon": 73.902,
+    "intervention_type": "farm_pond",
+    "observation_stage": "post",
+    "captured_at": "2024-08-30",
+    "description": "Farm pond filled (0.3 ha). Green buffer zone established around bund.",
+    "source": "Unsplash (real photo)"
+  },
+  {
+    "filename": "img_afforestation_pre.jpg",
+    "public_path": "/images/img_afforestation_pre.jpg",
+    "lat": 24.935,
+    "lon": 73.868,
+    "intervention_type": "afforestation",
+    "observation_stage": "pre",
+    "captured_at": "2022-05-28",
+    "description": "Degraded hillslope. Sheet erosion visible. Afforestation proposed.",
+    "source": "Unsplash (real photo)"
+  },
+  {
+    "filename": "img_afforestation_post.jpg",
+    "public_path": "/images/img_afforestation_post.jpg",
+    "lat": 24.936,
+    "lon": 73.868,
+    "intervention_type": "afforestation",
+    "observation_stage": "post",
+    "captured_at": "2024-09-05",
+    "description": "Young neem/khejri trees 2-3m. Ground cover established. Erosion arrested.",
+    "source": "Unsplash (real photo)"
+  },
+  {
+    "filename": "img_contour_trench_post.jpg",
+    "public_path": "/images/img_contour_trench_post.jpg",
+    "lat": 24.875,
+    "lon": 73.851,
+    "intervention_type": "contour_trench",
+    "observation_stage": "post",
+    "captured_at": "2024-09-12",
+    "description": "Contour trenches across hillslope. Moisture retained post-monsoon.",
+    "source": "Unsplash (real photo)"
+  },
+  {
+    "filename": "img_gully_plug_post.jpg",
+    "public_path": "/images/img_gully_plug_post.jpg",
+    "lat": 24.888,
+    "lon": 73.912,
+    "intervention_type": "gully_plug",
+    "observation_stage": "post",
+    "captured_at": "2024-09-18",
+    "description": "Stone gully plug. Sediment trapped upstream. Erosion arrested.",
+    "source": "Unsplash (real photo)"
+  }
+]

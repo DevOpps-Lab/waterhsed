@@ -1,0 +1,39 @@
+version: '3.9'
+
+services:
+  # ── TiTiler (Cloud-Optimized GeoTIFF tile server) ──────────────────────
+  # This serves the COGs exported by the Google Earth Engine pipeline
+  titiler:
+    image: developmentseed/titiler:latest
+    container_name: watersight-titiler-prod
+    environment:
+      # We tell TiTiler how to access our S3 bucket containing the COGs
+      - AWS_ACCESS_KEY_ID=MOCK
+      - AWS_SECRET_ACCESS_KEY=MOCK
+      - AWS_REGION=us-east-1
+      # Optimization flags for reading raster data over HTTP
+      - GDAL_CACHEMAX=512
+      - GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR
+      - VSI_CACHE=TRUE
+      - VSI_CACHE_SIZE=536870912
+    ports:
+      - "8080:80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# ====================================================================
+# How the frontend should request tiles from this server:
+# ====================================================================
+# Endpoint: 
+# http://localhost:8080/cog/tiles/WebMercatorQuad/{z}/{x}/{y}
+# 
+# Query Params Required:
+# url=s3://watersight-bucket/rasters/123e4567.../ndvi_20240927_cog.tif
+# colormap_name=rdylgn  <-- For NDVI
+# rescale=-1,1          <-- NDVI range
+# 
+# Full Example for Mapbox/MapLibre:
+# http://localhost:8080/cog/tiles/WebMercatorQuad/{z}/{x}/{y}?url=s3://watersight-bucket/rasters/123e4567/ndvi_cog.tif&colormap_name=rdylgn&rescale=-1,1
