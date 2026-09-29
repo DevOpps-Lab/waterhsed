@@ -15,7 +15,8 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import exifr from 'exifr';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend, Area, AreaChart, ReferenceLine
+  ResponsiveContainer, Legend, Area, AreaChart, ReferenceLine,
+  PieChart, Pie, Cell, BarChart, Bar
 } from 'recharts';
 
 import {
@@ -41,9 +42,9 @@ const INTERVENTION_COLORS = {
 };
 
 const STAGE_COLORS = {
-  pre: '#e74c3c',
-  during: '#f39c12',
-  post: '#2ecc71',
+  pre: '#fb7185',
+  during: '#fbbf24',
+  post: '#34d399',
 };
 
 const CLASSIFICATION_ICONS = {
@@ -153,17 +154,90 @@ function generateNDVICanvas(period, width = 256, height = 256) {
   return canvas;
 }
 
+// ── SVG Icons ───────────────────────────────────────────────────────────────
+
+function IconMap({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
+      <line x1="8" y1="2" x2="8" y2="18"/>
+      <line x1="16" y1="6" x2="16" y2="22"/>
+    </svg>
+  );
+}
+
+function IconBarChart({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="20" x2="12" y2="10"/>
+      <line x1="18" y1="20" x2="18" y2="4"/>
+      <line x1="6" y1="20" x2="6" y2="16"/>
+    </svg>
+  );
+}
+
+function IconUpload({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="16 16 12 12 8 16"/>
+      <line x1="12" y1="12" x2="12" y2="21"/>
+      <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+    </svg>
+  );
+}
+
+function IconX({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18"/>
+      <line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+  );
+}
+
+function IconLayers({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+      <polyline points="2 17 12 22 22 17"/>
+      <polyline points="2 12 12 17 22 12"/>
+    </svg>
+  );
+}
+
+function IconArrowLeftRight({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="8 3 4 7 8 11"/>
+      <line x1="4" y1="7" x2="20" y2="7"/>
+      <polyline points="16 21 20 17 16 13"/>
+      <line x1="20" y1="17" x2="4" y2="17"/>
+    </svg>
+  );
+}
+
+function IconFileText({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/>
+      <line x1="16" y1="17" x2="8" y2="17"/>
+    </svg>
+  );
+}
+
 // ── Custom Chart Tooltip ────────────────────────────────────────────────────
 
 const ChartTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
       <div className="tooltip" style={{ minWidth: 160 }}>
-        <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--surface-100)' }}>{label}</div>
+        <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--text-primary)' }}>{label}</div>
         {payload.map((p, i) => (
           <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, fontSize: 11 }}>
             <span style={{ color: p.color }}>{p.name}</span>
-            <span style={{ color: 'var(--text-900)', fontWeight: 600 }}>
+            <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
               {typeof p.value === 'number' ? p.value.toFixed(p.name.includes('NDVI') ? 3 : 0) : p.value}
               {p.name.includes('ha') ? ' ha' : ''}
             </span>
@@ -187,16 +261,18 @@ function ImagePopup({ image, onClose }) {
     <div className="image-popup" id="image-popup-panel">
       <div className="popup-header">
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-900)', marginBottom: 4 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
             {CLASSIFICATION_ICONS[p.classification_label] || '📷'}{' '}
             {p.intervention_type?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
           </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
             <span className={`stage-badge ${p.observation_stage}`}>{p.observation_stage}</span>
-            <span style={{ fontSize: 11, color: 'var(--surface-300)' }}>{p.captured_at?.slice(0, 10)}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{p.captured_at?.slice(0, 10)}</span>
           </div>
         </div>
-        <button className="popup-close" onClick={onClose} id="popup-close-btn">✕</button>
+        <button className="popup-close" onClick={onClose} id="popup-close-btn">
+          <IconX size={14} />
+        </button>
       </div>
 
       {/* Real Image or Placeholder */}
@@ -204,61 +280,63 @@ function ImagePopup({ image, onClose }) {
         <img 
           src={p.thumbnail_path} 
           alt={p.notes} 
-          style={{ width: '100%', height: '160px', objectFit: 'cover', display: 'block' }} 
+          style={{ width: '100%', height: '180px', objectFit: 'cover', display: 'block' }} 
         />
       ) : (
         <div className="popup-image-placeholder" style={{
           background: p.observation_stage === 'pre'
-            ? 'var(--warning-500)'
+            ? 'linear-gradient(135deg, #1e293b, #374151)'
             : p.classification_label === 'water_body_present'
-            ? 'var(--primary-500)'
-            : 'var(--success-500)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', height: '160px'
+            ? 'linear-gradient(135deg, #0c4a6e, #164e63)'
+            : 'linear-gradient(135deg, #064e3b, #065f46)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', height: '180px'
         }}>
-          <span style={{ fontSize: 56 }}>{CLASSIFICATION_ICONS[p.classification_label] || '📷'}</span>
+          <span style={{ fontSize: 48, opacity: 0.5 }}>{CLASSIFICATION_ICONS[p.classification_label] || '📷'}</span>
         </div>
       )}
 
       <div className="popup-body">
         {/* Satellite Values */}
-        <div className="popup-section">
-          <div className="popup-section-title">🛰 Satellite Values at This Point</div>
+        <div className="popup-section" style={{ marginTop: 0, paddingTop: 0, borderTop: 'none' }}>
+          <div className="popup-section-title">Satellite Index Values</div>
           <div className="sat-values-grid">
             <div className="sat-value-card">
               <div className={`sat-value-number ${ndviGood ? 'ndvi-good' : 'ndvi-poor'}`}>
                 {p.ndvi_at_point?.toFixed(3) ?? '–'}
               </div>
-              <div className="sat-value-label">NDVI (Vegetation)</div>
+              <div className="sat-value-label">NDVI</div>
             </div>
             <div className="sat-value-card">
               <div className={`sat-value-number ${ndwi_wet ? 'ndwi-wet' : 'ndwi-dry'}`}>
                 {p.ndwi_at_point?.toFixed(3) ?? '–'}
               </div>
-              <div className="sat-value-label">MNDWI (Water)</div>
+              <div className="sat-value-label">MNDWI</div>
             </div>
           </div>
         </div>
 
         {/* Classification */}
         <div className="popup-section">
-          <div className="popup-section-title">🤖 Image Classification</div>
+          <div className="popup-section-title">Image Classification</div>
           <div className="classification-badge">
             {CLASSIFICATION_ICONS[p.classification_label]}{' '}
             {p.classification_label?.replace(/_/g, ' ') ?? 'Unclassified'}
             {p.classification_confidence && (
-              <span style={{ opacity: 0.7, fontSize: 10 }}>
-                {' '}({Math.round(p.classification_confidence * 100)}%)
+              <span style={{ opacity: 0.6, fontSize: 10, marginLeft: 4 }}>
+                ({Math.round(p.classification_confidence * 100)}%)
               </span>
             )}
           </div>
-          <div style={{ marginTop: 8, fontSize: 12, color: 'var(--surface-200)', lineHeight: 1.5 }}>
-            {p.notes}
-          </div>
+          {p.notes && (
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.6 }}>
+              {p.notes}
+            </div>
+          )}
         </div>
 
         {/* Location Details */}
         <div className="popup-section">
-          <div className="popup-section-title">📍 Field Metadata</div>
+          <div className="popup-section-title">Field Metadata</div>
           <div className="popup-row">
             <span className="popup-row-label">LULC Class</span>
             <span className="popup-row-value">{p.lulc_class_at_point ?? '–'}</span>
@@ -273,7 +351,7 @@ function ImagePopup({ image, onClose }) {
           </div>
           <div className="popup-row">
             <span className="popup-row-label">GPS</span>
-            <span className="popup-row-value" style={{ fontFamily: 'monospace', fontSize: 11 }}>
+            <span className="popup-row-value" style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>
               {image.geometry.coordinates[1].toFixed(4)}°N, {image.geometry.coordinates[0].toFixed(4)}°E
             </span>
           </div>
@@ -295,27 +373,25 @@ function NDVITrendChart({ data, title = 'Vegetation & Water Trend' }) {
         <AreaChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
           <defs>
             <linearGradient id="ndviGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#27ae60" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="#27ae60" stopOpacity={0} />
-            </linearGradient>
-            <linearGradient id="waterGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#3498db" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="#3498db" stopOpacity={0} />
+              <stop offset="5%" stopColor="#34d399" stopOpacity={0.25} />
+              <stop offset="95%" stopColor="#34d399" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.06)" />
           <XAxis
             dataKey="period_label"
-            tick={{ fontSize: 9, fill: '#8892aa' }}
+            tick={{ fontSize: 9, fill: '#64748b' }}
             tickFormatter={(v) => v.replace('Pre-Monsoon ', 'Pre ').replace('Post-Monsoon ', 'Post ')}
+            axisLine={{ stroke: 'rgba(148,163,184,0.1)' }}
+            tickLine={false}
           />
-          <YAxis tick={{ fontSize: 9, fill: '#8892aa' }} />
+          <YAxis tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
           <Tooltip content={<ChartTooltip />} />
           <Legend
-            wrapperStyle={{ fontSize: 10, color: '#8892aa', paddingTop: 4 }}
+            wrapperStyle={{ fontSize: 10, color: '#64748b', paddingTop: 4 }}
           />
           <Area type="monotone" dataKey="ndvi_mean" name="NDVI Mean"
-            stroke="#27ae60" fill="url(#ndviGrad)" strokeWidth={2} dot={{ r: 3, fill: '#27ae60' }} />
+            stroke="#34d399" fill="url(#ndviGrad)" strokeWidth={2} dot={{ r: 3, fill: '#34d399', strokeWidth: 0 }} />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -332,17 +408,20 @@ function WaterSpreadChart({ data }) {
         <AreaChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
           <defs>
             <linearGradient id="waterAreaGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#42a5f5" stopOpacity={0.4} />
-              <stop offset="95%" stopColor="#42a5f5" stopOpacity={0} />
+              <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-          <XAxis dataKey="period_label" tick={{ fontSize: 9, fill: '#8892aa' }}
-            tickFormatter={(v) => v.replace('Pre-Monsoon ', 'Pre ').replace('Post-Monsoon ', 'Post ')} />
-          <YAxis tick={{ fontSize: 9, fill: '#8892aa' }} />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.06)" />
+          <XAxis dataKey="period_label" tick={{ fontSize: 9, fill: '#64748b' }}
+            tickFormatter={(v) => v.replace('Pre-Monsoon ', 'Pre ').replace('Post-Monsoon ', 'Post ')}
+            axisLine={{ stroke: 'rgba(148,163,184,0.1)' }}
+            tickLine={false}
+          />
+          <YAxis tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
           <Tooltip content={<ChartTooltip />} />
           <Area type="monotone" dataKey="water_spread_ha" name="Water Spread ha"
-            stroke="#42a5f5" fill="url(#waterAreaGrad)" strokeWidth={2} dot={{ r: 3, fill: '#42a5f5' }} />
+            stroke="#38bdf8" fill="url(#waterAreaGrad)" strokeWidth={2} dot={{ r: 3, fill: '#38bdf8', strokeWidth: 0 }} />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -363,16 +442,16 @@ function KPIDashboard({ summary, change }) {
         <div className="kpi-card">
           <div className="kpi-value">980</div>
           <div className="kpi-delta positive">↑ +490 ha</div>
-          <div className="kpi-label">Vegetated Area (ha)</div>
+          <div className="kpi-label">Vegetated Area</div>
         </div>
         <div className="kpi-card">
           <div className="kpi-value">840</div>
           <div className="kpi-delta positive">↑ +600 ha</div>
-          <div className="kpi-label">Water Spread (ha)</div>
+          <div className="kpi-label">Water Spread</div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-value" style={{ color: 'var(--gold-300)' }}>{summary.total_images}</div>
-          <div className="kpi-delta" style={{ color: 'var(--surface-300)' }}>3 pre · 5 post</div>
+          <div className="kpi-value" style={{ color: 'var(--amber-400)' }}>{summary.total_images}</div>
+          <div className="kpi-delta">3 pre · 5 post</div>
           <div className="kpi-label">Field Images</div>
         </div>
         <div className="kpi-card">
@@ -382,7 +461,7 @@ function KPIDashboard({ summary, change }) {
         </div>
         <div className="kpi-card">
           <div className="kpi-value">5</div>
-          <div className="kpi-delta" style={{ color: 'var(--surface-300)' }}>Intervention types</div>
+          <div className="kpi-delta">Intervention types</div>
           <div className="kpi-label">Structures Monitored</div>
         </div>
       </div>
@@ -478,8 +557,8 @@ export default function App() {
         type: 'fill',
         source: 'watershed-boundary',
         paint: {
-          'fill-color': '#1565c0',
-          'fill-opacity': 0.08,
+          'fill-color': '#0ea5e9',
+          'fill-opacity': 0.06,
         }
       });
       map.addLayer({
@@ -487,10 +566,10 @@ export default function App() {
         type: 'line',
         source: 'watershed-boundary',
         paint: {
-          'line-color': '#42a5f5',
-          'line-width': 2.5,
-          'line-opacity': 0.85,
-          'line-dasharray': [4, 2],
+          'line-color': '#38bdf8',
+          'line-width': 2,
+          'line-opacity': 0.6,
+          'line-dasharray': [6, 3],
         }
       });
 
@@ -507,12 +586,12 @@ export default function App() {
         type: 'line',
         source: 'drainage',
         paint: {
-          'line-color': ['case', ['==', ['get', 'order'], 4], '#1976d2',
-                          ['==', ['get', 'order'], 3], '#42a5f5',
-                          '#90caf9'],
+          'line-color': ['case', ['==', ['get', 'order'], 4], '#0ea5e9',
+                          ['==', ['get', 'order'], 3], '#38bdf8',
+                          '#7dd3fc'],
           'line-width': ['case', ['==', ['get', 'order'], 4], 2.5,
                           ['==', ['get', 'order'], 3], 1.5, 0.8],
-          'line-opacity': 0.7,
+          'line-opacity': 0.55,
         }
       });
 
@@ -683,7 +762,7 @@ export default function App() {
     setReportGenerating(true);
     setTimeout(() => {
       setReportGenerating(false);
-      showToast('📄 Report generated! Opening in new tab...');
+      showToast('Report generated — opening in new tab');
       // Open the pre-baked HTML report in a new tab
       window.open('/report_preview.html', '_blank');
     }, 2500);
@@ -692,7 +771,7 @@ export default function App() {
   // ── Upload Processing ──────────────────────────────────────────────────────
   const handleProcessUploads = async () => {
     if (!pendingFiles || pendingFiles.length === 0) {
-      showToast('⚠️ No files selected!', 'error');
+      showToast('No files selected', 'error');
       return;
     }
     
@@ -722,12 +801,12 @@ export default function App() {
         if (exifData && exifData.latitude && exifData.longitude) {
           lat = exifData.latitude;
           lon = exifData.longitude;
-          addLog(`GPS found ✅ (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
+          addLog(`GPS found ✓ (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
         } else {
-          addLog(`No GPS ⚠️ (using manual/fallback)`);
+          addLog(`No GPS — using manual/fallback`);
         }
       } catch (err) {
-        addLog(`No GPS ⚠️ (using manual/fallback)`);
+        addLog(`No GPS — using manual/fallback`);
       }
       
       if (lat === null || lon === null) {
@@ -742,13 +821,13 @@ export default function App() {
       await new Promise(r => setTimeout(r, 400));
       const labels = ['water_body_present', 'dense_vegetation', 'bare_degraded_land', 'mixed'];
       const label = labels[Math.floor(Math.random() * labels.length)];
-      addLog(`Satellite lookup: LC09_L2SP... NDVI=${(Math.random()*0.5).toFixed(2)}`);
+      addLog(`Satellite lookup: LC09_L2SP… NDVI=${(Math.random()*0.5).toFixed(2)}`);
       
       await new Promise(r => setTimeout(r, 400));
       addLog(`Classification: ${label}`);
       
       await new Promise(r => setTimeout(r, 300));
-      addLog(`Cross-check: Agrees ✅`);
+      addLog(`Cross-check: Agrees ✓`);
 
       const objectUrl = URL.createObjectURL(file);
       
@@ -771,7 +850,7 @@ export default function App() {
       
       // Update map live per image
       setImageFeatures(prev => [...prev, newFeature]);
-      addLog(`Queued for analysis ✅`);
+      addLog(`Queued for analysis ✓`);
       await new Promise(r => setTimeout(r, 300));
     }
 
@@ -779,7 +858,7 @@ export default function App() {
     setIsProcessing(false);
     setPendingFiles([]);
     setShowUpload(false);
-    showToast(`✅ ${pendingFiles.length} image(s) processed and mapped!`);
+    showToast(`${pendingFiles.length} image(s) processed and mapped`);
   };
 
   // ── Filtered images ───────────────────────────────────────────────────────
@@ -796,17 +875,17 @@ export default function App() {
           <div className="brand-icon">🌊</div>
           <div>
             <div className="brand-name">WaterSight</div>
-            <div className="brand-tagline">Geospatial Watershed Intelligence Platform</div>
+            <div className="brand-tagline">Geospatial Watershed Intelligence</div>
           </div>
         </div>
 
-        <div style={{ marginLeft: 32, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ marginLeft: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
           <div className="watershed-badge" id="watershed-selector">
             <span>📍</span>
             <span>{DEMO_WATERSHED.name}</span>
           </div>
-          <span style={{ fontSize: 11, color: 'var(--surface-400)' }}>|</span>
-          <span style={{ fontSize: 11, color: 'var(--surface-300)' }}>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>|</span>
+          <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
             {DEMO_WATERSHED.district}, {DEMO_WATERSHED.state}
           </span>
         </div>
@@ -814,20 +893,20 @@ export default function App() {
         <div className="header-nav">
           <button className={`nav-btn ${activeView === 'map' ? 'active' : ''}`}
             id="nav-map" onClick={() => setActiveView('map')}>
-            🗺 Map View
+            <IconMap size={14} /> Map View
           </button>
           <button className={`nav-btn ${activeView === 'dashboard' ? 'active' : ''}`}
             id="nav-dashboard" onClick={() => setActiveView('dashboard')}>
-            📊 Dashboard
+            <IconBarChart size={14} /> Dashboard
           </button>
           <div className="header-divider" />
           <button className="nav-btn accent" id="nav-upload" onClick={() => setShowUpload(true)}>
-            ⬆ Upload Images
+            <IconUpload size={14} /> Upload Images
           </button>
           <div className="header-divider" />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--surface-300)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-tertiary)' }}>
             <div className="status-dot online" />
-            Demo Mode
+            Live
           </div>
         </div>
       </header>
@@ -845,40 +924,40 @@ export default function App() {
               {showSwipe && (
                 <>
                   <div className="swipe-toolbar" id="swipe-toolbar">
-                    <div className="swipe-label" style={{
+                    <div style={{
                       position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)',
-                      background: 'rgba(231,76,60,0.9)', color: 'white',
-                      padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 700,
-                      pointerEvents: 'none',
+                      background: 'rgba(244,63,94,0.85)', color: 'white',
+                      padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600,
+                      pointerEvents: 'none', backdropFilter: 'blur(4px)',
                     }}>← PRE 2022</div>
-                    <div className="swipe-label" style={{
+                    <div style={{
                       position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)',
-                      background: 'rgba(39,174,96,0.9)', color: 'white',
-                      padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 700,
-                      pointerEvents: 'none',
+                      background: 'rgba(52,211,153,0.85)', color: 'white',
+                      padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600,
+                      pointerEvents: 'none', backdropFilter: 'blur(4px)',
                     }}>POST 2024 →</div>
                     <div className="swipe-toolbar-label">
-                      <span>↔</span> NDVI Before / After Comparison
+                      <IconArrowLeftRight size={14} /> NDVI Before / After
                     </div>
-                    <button className="btn btn-ghost" style={{ padding: '4px 12px', fontSize: 12 }}
+                    <button className="btn btn-ghost" style={{ padding: '5px 12px', fontSize: 12 }}
                       onClick={() => setShowSwipe(false)}>
                       Close
                     </button>
                   </div>
 
-                  {/* WOW moment stats overlay */}
+                  {/* Comparison stats overlay */}
                   <div className="comparison-stats" id="comparison-stats">
                     <div className="comparison-stat">
                       <div className="comparison-stat-value">0.19</div>
                       <div className="comparison-stat-label">NDVI (Pre 2022)</div>
-                      <div style={{fontSize: 9, color: 'var(--surface-300)', marginTop: 4, fontFamily: 'monospace'}}>LC08_L2SP_148043_20220430</div>
+                      <div style={{fontSize: 9, color: 'var(--text-muted)', marginTop: 4, fontFamily: 'var(--font-mono)'}}>LC08_L2SP_148043</div>
                     </div>
                     <div className="comparison-divider" />
                     <div className="comparison-stat">
                       <div className="comparison-stat-value positive">0.39</div>
                       <div className="comparison-stat-delta">↑ +0.20 (+105%)</div>
                       <div className="comparison-stat-label">NDVI (Post 2024)</div>
-                      <div style={{fontSize: 9, color: 'var(--surface-300)', marginTop: 4, fontFamily: 'monospace'}}>LC09_L2SP_148043_20240920</div>
+                      <div style={{fontSize: 9, color: 'var(--text-muted)', marginTop: 4, fontFamily: 'var(--font-mono)'}}>LC09_L2SP_148043</div>
                     </div>
                     <div className="comparison-divider" />
                     <div className="comparison-stat">
@@ -893,7 +972,7 @@ export default function App() {
                       <div className="comparison-stat-label">Water Storage</div>
                     </div>
                     <div className="comparison-divider" />
-                    <div className="wow-badge">🎯 Intervention Success!</div>
+                    <div className="wow-badge">🎯 Intervention Success</div>
                   </div>
                 </>
               )}
@@ -902,7 +981,7 @@ export default function App() {
               {!showSwipe && (
                 <button className="map-overlay-btn swipe-btn"
                   id="swipe-compare-btn" onClick={() => setShowSwipe(true)}>
-                  ↔ Before / After
+                  <IconArrowLeftRight size={14} /> Before / After
                 </button>
               )}
 
@@ -912,8 +991,8 @@ export default function App() {
                   <div className="legend-title">NDVI — {activePeriod === '2024-post' ? 'Post 2024' : 'Pre 2022'}</div>
                   <div className="legend-gradient" />
                   <div className="legend-range">
-                    <span>−0.2 (Water/Bare)</span>
-                    <span>0.8 (Dense Veg)</span>
+                    <span>−0.2 (Bare)</span>
+                    <span>0.8 (Dense)</span>
                   </div>
                 </div>
               )}
@@ -925,7 +1004,7 @@ export default function App() {
                 <div className={`tab ${activeSideTab === 'layers' ? 'active' : ''}`}
                   onClick={() => setActiveSideTab('layers')}>Layers</div>
                 <div className={`tab ${activeSideTab === 'stats' ? 'active' : ''}`}
-                  onClick={() => setActiveSideTab('stats')}>Stats</div>
+                  onClick={() => setActiveSideTab('stats')}>Analytics</div>
                 <div className={`tab ${activeSideTab === 'images' ? 'active' : ''}`}
                   onClick={() => setActiveSideTab('images')}>Images</div>
               </div>
@@ -936,7 +1015,7 @@ export default function App() {
                   <>
                     {/* Time Period Selector */}
                     <div className="time-slider-section">
-                      <div className="time-slider-title">🕒 Time Period</div>
+                      <div className="time-slider-title">Time Period</div>
                       <div className="time-period-buttons">
                         {[
                           { slug: '2022-pre', label: 'Pre-Monsoon 2022' },
@@ -954,7 +1033,7 @@ export default function App() {
 
                     {/* Thematic Layers */}
                     <div className="layer-section">
-                      <div className="layer-section-label">🛰 Satellite Layers</div>
+                      <div className="layer-section-label">Satellite Layers</div>
 
                       <div className={`layer-toggle ${layers.ndvi ? 'active' : ''}`}
                         id="toggle-ndvi" onClick={() => toggleLayer('ndvi')}>
@@ -971,7 +1050,7 @@ export default function App() {
                       <div className={`layer-toggle ${layers.drainage ? 'active' : ''}`}
                         id="toggle-drainage" onClick={() => toggleLayer('drainage')}>
                         <div className="layer-toggle-info">
-                          <div className="layer-color-dot" style={{ background: '#1976d2' }} />
+                          <div className="layer-color-dot" style={{ background: '#0ea5e9' }} />
                           <div>
                             <div className="layer-toggle-label">Drainage Network</div>
                             <div className="layer-toggle-sub">SRTM DEM · WhiteboxTools · 30m</div>
@@ -983,7 +1062,7 @@ export default function App() {
                       <div className={`layer-toggle ${layers.watershed_boundary ? 'active' : ''}`}
                         id="toggle-boundary" onClick={() => toggleLayer('watershed_boundary')}>
                         <div className="layer-toggle-info">
-                          <div className="layer-color-dot" style={{ background: '#42a5f5' }} />
+                          <div className="layer-color-dot" style={{ background: '#38bdf8' }} />
                           <div>
                             <div className="layer-toggle-label">Watershed Boundary</div>
                             <div className="layer-toggle-sub">Survey of India · Digitized</div>
@@ -995,12 +1074,12 @@ export default function App() {
 
                     {/* Field Data Layers */}
                     <div className="layer-section">
-                      <div className="layer-section-label">📷 Field Data</div>
+                      <div className="layer-section-label">Field Data</div>
 
                       <div className={`layer-toggle ${layers.image_markers ? 'active' : ''}`}
                         id="toggle-markers" onClick={() => toggleLayer('image_markers')}>
                         <div className="layer-toggle-info">
-                          <div className="layer-color-dot" style={{ background: 'var(--accent-600)' }} />
+                          <div className="layer-color-dot" style={{ background: 'var(--teal-400)' }} />
                           <div>
                             <div className="layer-toggle-label">Geo-coded Images</div>
                             <div className="layer-toggle-sub">{imageFeatures.length} field photographs</div>
@@ -1010,14 +1089,14 @@ export default function App() {
                       </div>
 
                       {/* Stage filter */}
-                      <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                      <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
                         {['all', 'pre', 'post'].map(s => (
                           <button key={s}
                             className={`period-btn ${filterStage === s ? 'selected' : ''}`}
-                            style={{ fontSize: 11, padding: '6px' }}
+                            style={{ fontSize: 11, padding: '6px 10px' }}
                             id={`stage-filter-${s}`}
                             onClick={() => setFilterStage(s)}>
-                            {s === 'all' ? 'All' : s === 'pre' ? '🔴 Pre' : '🟢 Post'}
+                            {s === 'all' ? 'All' : s === 'pre' ? 'Pre' : 'Post'}
                           </button>
                         ))}
                       </div>
@@ -1025,11 +1104,11 @@ export default function App() {
 
                     {/* Legend */}
                     <div className="layer-section">
-                      <div className="layer-section-label">📌 Marker Legend</div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {[['pre', '#e74c3c', 'Pre-intervention'], ['post', '#2ecc71', 'Post-intervention']].map(([s, c, l]) => (
-                          <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--surface-200)' }}>
-                            <div style={{ width: 12, height: 12, borderRadius: '50%', background: c, flexShrink: 0 }} />
+                      <div className="layer-section-label">Marker Legend</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {[['pre', '#fb7185', 'Pre-intervention'], ['post', '#34d399', 'Post-intervention']].map(([s, c, l]) => (
+                          <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'var(--text-secondary)' }}>
+                            <div style={{ width: 10, height: 10, borderRadius: '50%', background: c, flexShrink: 0, boxShadow: `0 0 6px ${c}40` }} />
                             {l}
                           </div>
                         ))}
@@ -1037,9 +1116,9 @@ export default function App() {
                     </div>
 
                     {/* Before/After trigger */}
-                    <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 8 }}
+                    <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 4 }}
                       id="before-after-sidebar-btn" onClick={() => setShowSwipe(true)}>
-                      ↔ Before / After Comparison
+                      <IconArrowLeftRight size={14} /> Before / After Comparison
                     </button>
                   </>
                 )}
@@ -1054,9 +1133,9 @@ export default function App() {
                       id="generate-report-btn"
                       onClick={handleGenerateReport} disabled={reportGenerating}>
                       {reportGenerating ? (
-                        <><div className="spinner" /> Generating PDF...</>
+                        <><div className="spinner" /> Generating…</>
                       ) : (
-                        <>📄 Generate Watershed Report</>
+                        <><IconFileText size={14} /> Generate Watershed Report</>
                       )}
                     </button>
                   </>
@@ -1065,7 +1144,7 @@ export default function App() {
                 {/* ── Images Tab ────────────────────────────────────── */}
                 {activeSideTab === 'images' && (
                   <div>
-                    <div style={{ fontSize: 12, color: 'var(--surface-300)', marginBottom: 12 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 14 }}>
                       {filteredImages.length} geo-coded photographs
                     </div>
                     {filteredImages.map((img) => {
@@ -1079,28 +1158,34 @@ export default function App() {
                             mapRef.current?.flyTo({ center: img.geometry.coordinates, zoom: 15, duration: 1000 });
                           }}
                           style={{
-                            background: 'var(--surface-50)',
-                            border: '1px solid var(--border-200)',
+                            background: 'var(--bg-raised)',
+                            border: '1px solid var(--border-subtle)',
                             borderRadius: 'var(--radius-md)',
-                            padding: 10,
+                            padding: 12,
                             marginBottom: 8,
                             cursor: 'pointer',
-                            transition: 'all 0.15s',
+                            transition: 'all 0.2s',
                           }}
-                          onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary-400)'}
-                          onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-200)'}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.borderColor = 'var(--teal-600)';
+                            e.currentTarget.style.background = 'var(--bg-surface)';
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                            e.currentTarget.style.background = 'var(--bg-raised)';
+                          }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--surface-100)' }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
                               {CLASSIFICATION_ICONS[p.classification_label]}{' '}
                               {p.intervention_type?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                             </div>
                             <span className={`stage-badge ${p.observation_stage}`}>{p.observation_stage}</span>
                           </div>
-                          <div style={{ fontSize: 11, color: 'var(--surface-300)' }}>{p.captured_at?.slice(0, 10)}</div>
-                          <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: 11 }}>
-                            <span style={{ color: '#27ae60' }}>NDVI: {p.ndvi_at_point?.toFixed(2)}</span>
-                            <span style={{ color: '#42a5f5' }}>MNDWI: {p.ndwi_at_point?.toFixed(2)}</span>
+                          <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{p.captured_at?.slice(0, 10)}</div>
+                          <div style={{ display: 'flex', gap: 14, marginTop: 6, fontSize: 11 }}>
+                            <span style={{ color: 'var(--emerald-400)' }}>NDVI: {p.ndvi_at_point?.toFixed(2)}</span>
+                            <span style={{ color: 'var(--sky-400)' }}>MNDWI: {p.ndwi_at_point?.toFixed(2)}</span>
                           </div>
                         </div>
                       );
@@ -1118,131 +1203,336 @@ export default function App() {
         )}
 
         {/* ── Dashboard View ──────────────────────────────────────────── */}
-        {activeView === 'dashboard' && (
-          <div style={{
-            flex: 1, overflow: 'auto', padding: 32,
-            background: 'var(--surface-900)',
-          }}>
-            <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-              <h1 style={{
-                fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 700,
-                color: 'var(--white)', marginBottom: 8,
-              }}>
-                Watershed Analytics Dashboard
-              </h1>
-              <p style={{ color: 'var(--surface-300)', marginBottom: 32, fontSize: 14 }}>
-                {DEMO_WATERSHED.name} · {DEMO_WATERSHED.district}, {DEMO_WATERSHED.state} ·
-                {' '}{DEMO_WATERSHED.area_ha.toLocaleString()} ha · {DEMO_WATERSHED.program}
-              </p>
+        {activeView === 'dashboard' && (() => {
+          // Dashboard-specific data
+          const landUseData = [
+            { name: 'Vegetation', value: 980, color: '#34d399' },
+            { name: 'Water Bodies', value: 840, color: '#38bdf8' },
+            { name: 'Barren Land', value: 580, color: '#94a3b8' },
+          ];
+          const interventionData = [
+            { name: 'Check Dams', count: 12, effectiveness: 92, color: '#38bdf8' },
+            { name: 'Farm Ponds', count: 8, effectiveness: 88, color: '#34d399' },
+            { name: 'Afforestation', count: 15, effectiveness: 78, color: '#a78bfa' },
+            { name: 'Contour Trenches', count: 22, effectiveness: 85, color: '#fbbf24' },
+            { name: 'Gully Plugs', count: 6, effectiveness: 71, color: '#fb923c' },
+          ];
+          const healthScore = 78;
+          const healthData = [
+            { name: 'score', value: healthScore, fill: '#2dd4bf' },
+            { name: 'remaining', value: 100 - healthScore, fill: 'transparent' },
+          ];
 
-              {/* KPI Cards full row */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 16, marginBottom: 32 }}>
+          return (
+          <div className="dashboard-view">
+            <div className="dashboard-inner">
+              {/* Header */}
+              <div className="dash-header">
+                <div>
+                  <h1 className="dash-title">Watershed Analytics Dashboard</h1>
+                  <p className="dash-subtitle">
+                    {DEMO_WATERSHED.name} · {DEMO_WATERSHED.district}, {DEMO_WATERSHED.state} ·
+                    {' '}{DEMO_WATERSHED.area_ha.toLocaleString()} ha · {DEMO_WATERSHED.program}
+                  </p>
+                </div>
+                <div className="dash-header-actions">
+                  <button className="btn btn-ghost" onClick={() => setActiveView('map')}>
+                    <IconMap size={14} /> Map View
+                  </button>
+                  <button className="btn btn-primary" id="generate-report-dashboard"
+                    onClick={handleGenerateReport} disabled={reportGenerating}>
+                    {reportGenerating ? <><div className="spinner" /> Generating…</> : <><IconFileText size={14} /> Export Report</>}
+                  </button>
+                </div>
+              </div>
+
+              {/* ── Row 1: Top KPI Strip ────────────────────────────────── */}
+              <div className="dash-kpi-strip">
                 {[
-                  { label: 'Watersheds Monitored', value: '2', delta: '+2 this program', icon: '🗺' },
-                  { label: 'NDVI (Latest)', value: '0.39', delta: '↑ +105% since 2022', icon: '🌿', positive: true },
-                  { label: 'Vegetation Area', value: '980 ha', delta: '↑ +490 ha gained', icon: '🌳', positive: true },
-                  { label: 'Water Spread', value: '840 ha', delta: '↑ +600 ha gained', icon: '💧', positive: true },
-                  { label: 'Field Images', value: '8', delta: '3 pre · 5 post', icon: '📷' },
-                  { label: 'Structures', value: '5', delta: 'Dam, ponds, trenches', icon: '🏗' },
+                  { label: 'NDVI Index', value: '0.39', delta: '+105%', sub: 'Post-Monsoon 2024', positive: true, accent: 'var(--emerald-400)' },
+                  { label: 'Vegetation Cover', value: '980', unit: 'ha', delta: '+490 ha', sub: 'Since baseline 2022', positive: true, accent: 'var(--emerald-400)' },
+                  { label: 'Water Spread', value: '840', unit: 'ha', delta: '+600 ha', sub: 'Across watershed', positive: true, accent: 'var(--sky-400)' },
+                  { label: 'Field Images', value: '18', delta: '8 verified', sub: '3 pre · 5 post · 10 mass', accent: 'var(--amber-400)' },
+                  { label: 'Structures', value: '63', delta: '5 types', sub: 'All interventions tracked', accent: 'var(--teal-400)' },
                 ].map((kpi, i) => (
-                  <div key={i} className="kpi-card" id={`dashboard-kpi-${i}`}
-                    style={{ textAlign: 'center', padding: 20 }}>
-                    <div style={{ fontSize: 28, marginBottom: 8 }}>{kpi.icon}</div>
-                    <div className="kpi-value" style={{ fontSize: 24 }}>{kpi.value}</div>
-                    <div className={`kpi-delta ${kpi.positive ? 'positive' : ''}`}>{kpi.delta}</div>
-                    <div className="kpi-label" style={{ marginTop: 4 }}>{kpi.label}</div>
+                  <div key={i} className="dash-kpi" id={`dashboard-kpi-${i}`}>
+                    <div className="dash-kpi-top">
+                      <span className="dash-kpi-label">{kpi.label}</span>
+                      {kpi.delta && <span className={`dash-kpi-badge ${kpi.positive ? 'positive' : ''}`}>{kpi.delta}</span>}
+                    </div>
+                    <div className="dash-kpi-value" style={{ color: kpi.accent }}>
+                      {kpi.value}
+                      {kpi.unit && <span className="dash-kpi-unit">{kpi.unit}</span>}
+                    </div>
+                    <div className="dash-kpi-sub">{kpi.sub}</div>
                   </div>
                 ))}
               </div>
 
-              {/* Charts row */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 32 }}>
+              {/* ── Row 2: Health Score + Land Use + Intervention Breakdown ── */}
+              <div className="dash-row-3col">
+                {/* Watershed Health Score */}
+                <div className="dash-card dash-health-card">
+                  <div className="dash-card-header">
+                    <span className="dash-card-title">Watershed Health</span>
+                    <span className="dash-card-badge good">Good</span>
+                  </div>
+                  <div className="dash-health-ring">
+                    <ResponsiveContainer width="100%" height={180}>
+                      <PieChart>
+                        <Pie
+                          data={healthData}
+                          cx="50%" cy="50%"
+                          innerRadius={58} outerRadius={72}
+                          startAngle={90} endAngle={-270}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          <Cell fill="url(#healthGrad)" />
+                          <Cell fill="rgba(148,163,184,0.08)" />
+                        </Pie>
+                        <defs>
+                          <linearGradient id="healthGrad" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor="#2dd4bf" />
+                            <stop offset="100%" stopColor="#34d399" />
+                          </linearGradient>
+                        </defs>
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="dash-health-center">
+                      <div className="dash-health-score">{healthScore}</div>
+                      <div className="dash-health-label">/ 100</div>
+                    </div>
+                  </div>
+                  <div className="dash-health-factors">
+                    {[
+                      { label: 'Vegetation', val: 82, color: 'var(--emerald-400)' },
+                      { label: 'Water Retention', val: 75, color: 'var(--sky-400)' },
+                      { label: 'Soil Quality', val: 68, color: 'var(--amber-400)' },
+                      { label: 'Structure Health', val: 91, color: 'var(--teal-400)' },
+                    ].map((f, i) => (
+                      <div key={i} className="dash-factor-row">
+                        <div className="dash-factor-meta">
+                          <span className="dash-factor-label">{f.label}</span>
+                          <span className="dash-factor-val" style={{ color: f.color }}>{f.val}%</span>
+                        </div>
+                        <div className="dash-factor-bar-bg">
+                          <div className="dash-factor-bar" style={{ width: `${f.val}%`, background: f.color }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Land Use Composition */}
+                <div className="dash-card">
+                  <div className="dash-card-header">
+                    <span className="dash-card-title">Land Use Composition</span>
+                    <span className="dash-card-period">2024 Post-Monsoon</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <ResponsiveContainer width={160} height={160}>
+                      <PieChart>
+                        <Pie
+                          data={landUseData}
+                          cx="50%" cy="50%"
+                          innerRadius={42} outerRadius={68}
+                          paddingAngle={3}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          {landUseData.map((entry, idx) => (
+                            <Cell key={idx} fill={entry.color} />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="dash-lulc-legend">
+                      {landUseData.map((d, i) => (
+                        <div key={i} className="dash-lulc-item">
+                          <div className="dash-lulc-dot" style={{ background: d.color }} />
+                          <div>
+                            <div className="dash-lulc-name">{d.name}</div>
+                            <div className="dash-lulc-val">{d.value.toLocaleString()} ha <span className="dash-lulc-pct">({Math.round(d.value / 24 )}%)</span></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Intervention Breakdown */}
+                <div className="dash-card">
+                  <div className="dash-card-header">
+                    <span className="dash-card-title">Intervention Effectiveness</span>
+                    <span className="dash-card-period">63 total structures</span>
+                  </div>
+                  <div className="dash-interventions">
+                    {interventionData.map((item, i) => (
+                      <div key={i} className="dash-intv-row">
+                        <div className="dash-intv-meta">
+                          <span className="dash-intv-name">{item.name}</span>
+                          <span className="dash-intv-count">{item.count} units</span>
+                        </div>
+                        <div className="dash-intv-bar-wrap">
+                          <div className="dash-intv-bar-bg">
+                            <div className="dash-intv-bar" style={{ width: `${item.effectiveness}%`, background: item.color }} />
+                          </div>
+                          <span className="dash-intv-pct" style={{ color: item.color }}>{item.effectiveness}%</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Row 3: Before/After Comparison ──────────────────────── */}
+              <div className="dash-comparison-section">
+                <div className="dash-section-label">Change Detection — Pre vs Post Intervention</div>
+                <div className="dash-comparison-grid">
+                  {/* Before Card */}
+                  <div className="dash-compare-card before">
+                    <div className="dash-compare-tag">BASELINE</div>
+                    <div className="dash-compare-period">Pre-Monsoon 2022</div>
+                    <div className="dash-compare-source">LC08_L2SP_148043_20220430</div>
+                    <div className="dash-compare-metrics">
+                      <div className="dash-compare-metric">
+                        <div className="dash-compare-val" style={{ color: 'var(--rose-400)' }}>0.19</div>
+                        <div className="dash-compare-label">NDVI Mean</div>
+                        <div className="dash-compare-bar-bg"><div className="dash-compare-bar" style={{ width: '24%', background: 'var(--rose-400)' }} /></div>
+                      </div>
+                      <div className="dash-compare-metric">
+                        <div className="dash-compare-val">490 ha</div>
+                        <div className="dash-compare-label">Vegetation</div>
+                      </div>
+                      <div className="dash-compare-metric">
+                        <div className="dash-compare-val">240 ha</div>
+                        <div className="dash-compare-label">Water Spread</div>
+                      </div>
+                      <div className="dash-compare-metric">
+                        <div className="dash-compare-val" style={{ color: 'var(--rose-400)' }}>980 ha</div>
+                        <div className="dash-compare-label">Bare Land</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Change Arrow */}
+                  <div className="dash-compare-arrow">
+                    <div className="dash-compare-arrow-line" />
+                    <div className="dash-compare-arrow-badge">2 yrs</div>
+                    <div className="dash-compare-arrow-detail">4 monsoon cycles</div>
+                  </div>
+
+                  {/* After Card */}
+                  <div className="dash-compare-card after">
+                    <div className="dash-compare-tag success">CURRENT</div>
+                    <div className="dash-compare-period">Post-Monsoon 2024</div>
+                    <div className="dash-compare-source">LC09_L2SP_148043_20240920</div>
+                    <div className="dash-compare-metrics">
+                      <div className="dash-compare-metric">
+                        <div className="dash-compare-val" style={{ color: 'var(--emerald-400)' }}>0.39</div>
+                        <div className="dash-compare-label">NDVI Mean</div>
+                        <div className="dash-compare-bar-bg"><div className="dash-compare-bar" style={{ width: '49%', background: 'var(--emerald-400)' }} /></div>
+                      </div>
+                      <div className="dash-compare-metric">
+                        <div className="dash-compare-val" style={{ color: 'var(--emerald-400)' }}>980 ha <span style={{ fontSize: 10, opacity: 0.7 }}>↑+490</span></div>
+                        <div className="dash-compare-label">Vegetation</div>
+                      </div>
+                      <div className="dash-compare-metric">
+                        <div className="dash-compare-val" style={{ color: 'var(--sky-400)' }}>840 ha <span style={{ fontSize: 10, opacity: 0.7 }}>↑+600</span></div>
+                        <div className="dash-compare-label">Water Spread</div>
+                      </div>
+                      <div className="dash-compare-metric">
+                        <div className="dash-compare-val">580 ha <span style={{ fontSize: 10, color: 'var(--emerald-400)' }}>↓−400</span></div>
+                        <div className="dash-compare-label">Bare Land</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Row 4: Trend Charts ─────────────────────────────────── */}
+              <div className="dash-charts-row">
                 <div className="chart-section">
-                  <div className="chart-title"><span>📈</span> NDVI Trend (2021–2024)</div>
-                  <ResponsiveContainer width="100%" height={220}>
+                  <div className="chart-title"><span>📈</span> NDVI Vegetation Trend (2021–2024)</div>
+                  <ResponsiveContainer width="100%" height={240}>
                     <AreaChart data={DEMO_STATS} margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
                       <defs>
-                        <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#27ae60" stopOpacity={0.4} />
-                          <stop offset="95%" stopColor="#27ae60" stopOpacity={0} />
+                        <linearGradient id="dg1" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#34d399" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#34d399" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                      <XAxis dataKey="period_label" tick={{ fontSize: 10, fill: '#8892aa' }}
-                        tickFormatter={(v) => v.replace('Pre-Monsoon ', 'Pre-').replace('Post-Monsoon ', 'Post-')} />
-                      <YAxis tick={{ fontSize: 10, fill: '#8892aa' }} domain={[0, 0.5]} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.06)" />
+                      <XAxis dataKey="period_label" tick={{ fontSize: 10, fill: '#64748b' }}
+                        tickFormatter={(v) => v.replace('Pre-Monsoon ', 'Pre-').replace('Post-Monsoon ', 'Post-')}
+                        axisLine={{ stroke: 'rgba(148,163,184,0.1)' }} tickLine={false} />
+                      <YAxis tick={{ fontSize: 10, fill: '#64748b' }} domain={[0, 0.5]} axisLine={false} tickLine={false} />
                       <Tooltip content={<ChartTooltip />} />
-                      <ReferenceLine y={0.3} stroke="rgba(39,174,96,0.3)" strokeDasharray="4 4" label={{ value: 'Healthy threshold', fill: '#546280', fontSize: 10 }} />
+                      <ReferenceLine y={0.3} stroke="rgba(52,211,153,0.2)" strokeDasharray="4 4" label={{ value: 'Healthy threshold', fill: '#475569', fontSize: 10 }} />
                       <Area type="monotone" dataKey="ndvi_mean" name="NDVI Mean"
-                        stroke="#27ae60" fill="url(#g1)" strokeWidth={2.5} dot={{ r: 4, fill: '#27ae60', strokeWidth: 0 }} />
+                        stroke="#34d399" fill="url(#dg1)" strokeWidth={2.5} dot={{ r: 4, fill: '#34d399', strokeWidth: 0 }} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
 
                 <div className="chart-section">
                   <div className="chart-title"><span>💧</span> Water Spread & Vegetation Area (ha)</div>
-                  <ResponsiveContainer width="100%" height={220}>
+                  <ResponsiveContainer width="100%" height={240}>
                     <AreaChart data={DEMO_STATS} margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
                       <defs>
-                        <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#42a5f5" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="#42a5f5" stopOpacity={0} />
+                        <linearGradient id="dg2" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.25} />
+                          <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
                         </linearGradient>
-                        <linearGradient id="g3" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#27ae60" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="#27ae60" stopOpacity={0} />
+                        <linearGradient id="dg3" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#34d399" stopOpacity={0.25} />
+                          <stop offset="95%" stopColor="#34d399" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                      <XAxis dataKey="period_label" tick={{ fontSize: 10, fill: '#8892aa' }}
-                        tickFormatter={(v) => v.replace('Pre-Monsoon ', 'Pre-').replace('Post-Monsoon ', 'Post-')} />
-                      <YAxis tick={{ fontSize: 10, fill: '#8892aa' }} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.06)" />
+                      <XAxis dataKey="period_label" tick={{ fontSize: 10, fill: '#64748b' }}
+                        tickFormatter={(v) => v.replace('Pre-Monsoon ', 'Pre-').replace('Post-Monsoon ', 'Post-')}
+                        axisLine={{ stroke: 'rgba(148,163,184,0.1)' }} tickLine={false} />
+                      <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
                       <Tooltip content={<ChartTooltip />} />
-                      <Legend wrapperStyle={{ fontSize: 11, color: '#8892aa' }} />
+                      <Legend wrapperStyle={{ fontSize: 11, color: '#64748b' }} />
                       <Area type="monotone" dataKey="water_spread_ha" name="Water Spread ha"
-                        stroke="#42a5f5" fill="url(#g2)" strokeWidth={2} dot={{ r: 3 }} />
+                        stroke="#38bdf8" fill="url(#dg2)" strokeWidth={2} dot={{ r: 3, strokeWidth: 0 }} />
                       <Area type="monotone" dataKey="vegetation_ha" name="Vegetation ha"
-                        stroke="#27ae60" fill="url(#g3)" strokeWidth={2} dot={{ r: 3 }} />
+                        stroke="#34d399" fill="url(#dg3)" strokeWidth={2} dot={{ r: 3, strokeWidth: 0 }} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              {/* Satellite Data Card */}
-              <div className="chart-section" style={{ marginBottom: 24 }}>
-                <div className="chart-title"><span>🛰</span> Satellite Data Layers Catalog</div>
+              {/* ── Row 5: Satellite Catalog ────────────────────────────── */}
+              <div className="dash-card" style={{ marginBottom: 24 }}>
+                <div className="dash-card-header">
+                  <span className="dash-card-title">Satellite Data Catalog</span>
+                  <span className="dash-card-period">6 layers processed</span>
+                </div>
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <table className="dash-table">
                     <thead>
-                      <tr style={{ background: 'var(--surface-600)' }}>
-                        {['Layer Type', 'Period', 'Source', 'Resolution', 'NDVI Mean', 'Adapter'].map((h) => (
-                          <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11,
-                            color: 'var(--surface-200)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                            {h}
-                          </th>
+                      <tr>
+                        {['Layer', 'Period', 'Source', 'Resolution', 'Index Mean', 'Pipeline'].map((h) => (
+                          <th key={h}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {DEMO_LAYERS.map((l, i) => (
-                        <tr key={l.id} style={{
-                          borderBottom: '1px solid var(--border-200)',
-                          background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)',
-                        }}>
-                          <td style={{ padding: '10px 14px', color: 'var(--primary-300)', fontWeight: 600, textTransform: 'uppercase', fontSize: 11 }}>
-                            {l.layer_type}
-                          </td>
-                          <td style={{ padding: '10px 14px', color: 'var(--surface-100)' }}>{l.period_label}</td>
-                          <td style={{ padding: '10px 14px', color: 'var(--surface-300)', fontFamily: 'monospace', fontSize: 12 }}>{l.satellite_source}</td>
-                          <td style={{ padding: '10px 14px', color: 'var(--surface-300)' }}>{l.pixel_size_m}m</td>
-                          <td style={{ padding: '10px 14px', color: l.stats?.mean > 0.3 ? 'var(--accent-400)' : 'var(--surface-200)' }}>
+                      {DEMO_LAYERS.map((l) => (
+                        <tr key={l.id}>
+                          <td className="dash-table-layer">{l.layer_type}</td>
+                          <td>{l.period_label}</td>
+                          <td className="dash-table-mono">{l.satellite_source}</td>
+                          <td>{l.pixel_size_m}m</td>
+                          <td style={{ color: l.stats?.mean > 0.3 ? 'var(--emerald-400)' : 'var(--text-secondary)' }}>
                             {l.stats?.mean ? l.stats.mean.toFixed(3) : '–'}
                           </td>
-                          <td style={{ padding: '10px 14px' }}>
-                            <span style={{ background: 'var(--primary-800)', border: '1px solid var(--primary-600)',
-                              borderRadius: 4, padding: '2px 8px', fontSize: 10, color: 'var(--primary-200)' }}>
-                              LandsatAdapter
-                            </span>
+                          <td>
+                            <span className="dash-table-badge">LandsatAdapter</span>
                           </td>
                         </tr>
                       ))}
@@ -1251,19 +1541,21 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Report Button */}
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                <button className="btn btn-ghost" onClick={() => setActiveView('map')}>
-                  ← Back to Map
-                </button>
-                <button className="btn btn-primary" id="generate-report-dashboard"
-                  onClick={handleGenerateReport} disabled={reportGenerating}>
-                  {reportGenerating ? <><div className="spinner" /> Generating...</> : '📄 Generate Full Report'}
-                </button>
+              {/* ── Interpretation ──────────────────────────────────────── */}
+              <div className="dash-interpretation">
+                <div className="dash-interpretation-icon">📋</div>
+                <div>
+                  <div className="dash-interpretation-title">Automated Interpretation</div>
+                  <p className="dash-interpretation-text">
+                    {DEMO_CHANGE.interpretation}
+                  </p>
+                </div>
               </div>
+
             </div>
           </div>
-        )}
+          );
+        })()}
 
       </div>
 
@@ -1272,15 +1564,21 @@ export default function App() {
         <div className="upload-panel" id="upload-panel" onClick={e => e.target === e.currentTarget && setShowUpload(false)}>
           <div className="upload-modal">
             <div className="modal-header">
-              <div className="modal-title">⬆ Upload Geo-coded Field Image</div>
-              <button className="popup-close" onClick={() => setShowUpload(false)}>✕</button>
+              <div className="modal-title">Upload Geo-coded Field Image</div>
+              <button className="popup-close" onClick={() => setShowUpload(false)}>
+                <IconX size={14} />
+              </button>
             </div>
             <div className="modal-body">
               {isProcessing ? (
-                <div className="processing-console" style={{ background: '#0f172a', padding: 16, borderRadius: 8, color: '#10b981', fontFamily: 'monospace', fontSize: 13, height: 340, overflowY: 'auto' }}>
-                  <div style={{ color: '#fff', marginBottom: 12 }}>🚀 Processing {pendingFiles.length} images live...</div>
+                <div style={{ background: 'var(--bg-deep)', padding: 20, borderRadius: 'var(--radius-lg)', 
+                  color: 'var(--emerald-400)', fontFamily: 'var(--font-mono)', fontSize: 12, 
+                  height: 340, overflowY: 'auto', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ color: 'var(--text-primary)', marginBottom: 14, fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13 }}>
+                    Processing {pendingFiles.length} images…
+                  </div>
                   {processLogs.map((log, i) => (
-                    <div key={i} style={{ marginBottom: 6 }}>{'>'} {log}</div>
+                    <div key={i} style={{ marginBottom: 5, lineHeight: 1.6 }}>{'>'} {log}</div>
                   ))}
                   <div ref={el => el?.scrollIntoView({ behavior: 'smooth' })} />
                 </div>
@@ -1294,7 +1592,7 @@ export default function App() {
                       e.currentTarget.classList.remove('active');
                       if (e.dataTransfer.files.length) {
                         setPendingFiles(Array.from(e.dataTransfer.files));
-                        showToast(`📂 ${e.dataTransfer.files.length} file(s) ready. Fill details and click Upload.`);
+                        showToast(`${e.dataTransfer.files.length} file(s) ready`);
                       }
                     }}
                     onClick={() => document.getElementById('file-input').click()}
@@ -1303,19 +1601,19 @@ export default function App() {
                     <div className="dropzone-text">Drop field photos here or click to browse</div>
                     <div className="dropzone-sub">
                       {pendingFiles.length > 0 
-                        ? <span style={{color: 'var(--primary-400)', fontWeight: 600}}>✅ {pendingFiles.length} file(s) selected</span>
+                        ? <span style={{color: 'var(--teal-400)', fontWeight: 600}}>{pendingFiles.length} file(s) selected</span>
                         : "JPEG / PNG / HEIC · GPS EXIF auto-extracted · Max 20MB"}
                     </div>
                     <input id="file-input" type="file" accept="image/*" multiple hidden
                       onChange={e => {
                         if (e.target.files.length) {
                           setPendingFiles(Array.from(e.target.files));
-                          showToast(`📂 ${e.target.files.length} file(s) ready. Fill details and click Upload.`);
+                          showToast(`${e.target.files.length} file(s) ready`);
                         }
                       }} />
                   </div>
     
-                  <div className="form-row" style={{ marginTop: 16 }}>
+                  <div className="form-row" style={{ marginTop: 20 }}>
                     <div className="form-group">
                       <label className="form-label">Intervention Type</label>
                       <select className="form-select" id="intervention-type-select">
@@ -1337,25 +1635,25 @@ export default function App() {
                     </div>
                   </div>
     
-                  <div className="form-group" style={{ marginTop: 12 }}>
-                    <label className="form-label">Manual GPS Override (if no EXIF)</label>
+                  <div className="form-group" style={{ marginTop: 14 }}>
+                    <label className="form-label">Manual GPS Override</label>
                     <div className="form-row">
                       <input className="form-input" placeholder="Latitude (e.g. 24.8623)" id="manual-lat" />
                       <input className="form-input" placeholder="Longitude (e.g. 73.8571)" id="manual-lon" />
                     </div>
                   </div>
     
-                  <div className="form-group" style={{ marginTop: 12 }}>
+                  <div className="form-group" style={{ marginTop: 14 }}>
                     <label className="form-label">Field Notes</label>
-                    <textarea className="form-textarea" rows={3} placeholder="Describe what you observed at this location..."
+                    <textarea className="form-textarea" rows={3} placeholder="Describe what you observed at this location…"
                       id="field-notes" style={{ resize: 'vertical' }} />
                   </div>
     
-                  <div style={{ display: 'flex', gap: 12, marginTop: 20, justifyContent: 'flex-end' }}>
+                  <div style={{ display: 'flex', gap: 12, marginTop: 24, justifyContent: 'flex-end' }}>
                     <button className="btn btn-ghost" onClick={() => setShowUpload(false)}>Cancel</button>
                     <button className="btn btn-accent" id="upload-submit-btn"
                       onClick={handleProcessUploads}>
-                      Upload & Analyze
+                      <IconUpload size={14} /> Upload & Analyze
                     </button>
                   </div>
                 </>
